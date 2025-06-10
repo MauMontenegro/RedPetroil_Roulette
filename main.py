@@ -6,7 +6,7 @@ import time
 import json
 
 # Configuración de la página
-st.set_page_config(page_title="Sorteo de Ganadores Red Petroil", page_icon="🎰", layout="wide")
+st.set_page_config(page_title="Sorteo de Ganadores Red Petroil", page_icon="gota_red.png", layout="wide")
 
 # Estilos CSS personalizados
 st.markdown("""
@@ -133,6 +133,8 @@ html_code = f"""
                 inset 0 5px 10px rgba(255,255,255,0.1);
             position: relative;
             overflow: hidden;
+            width: 600px; 
+            margin: 0 auto;  
         }}
         
         .slot-machine::before {{
