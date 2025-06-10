@@ -97,6 +97,8 @@ html_code = f"""
     <meta charset="UTF-8">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+        @import url('https://cdn.jsdelivr.net/gh/Gilroy-free/Gilroy-free@master/Gilroy-Light.css');
+        @import url('https://cdn.jsdelivr.net/gh/Gilroy-free/Gilroy-free@master/Gilroy-ExtraBold.css');
         
         * {{
             margin: 0;
@@ -151,10 +153,10 @@ html_code = f"""
         .slot-machine::after {{
             content: '';
             position: absolute;
-            bottom: 20px;
-            right: 20px;
-            width: 80px;
-            height: 80px;
+            bottom: 10px;
+            right: 10px;
+            width: 50px;
+            height: 50px;
             background-image: url('data:image/png;base64,{gota_base64}');
             background-size: contain;
             background-repeat: no-repeat;
@@ -235,6 +237,7 @@ html_code = f"""
             font-size: 18px;
             color: #ffffff;
             text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            font-family: 'Gilroy-Light', sans-serif;  /* or 'Gilroy-ExtraBold' */
         }}
         
         .particles {{
@@ -511,11 +514,12 @@ with st.expander("📋 Ver lista completa de participantes", expanded=False):
 
 # Footer
 st.markdown("""
-<div style='text-align: center; margin-top: 50px; padding: 20px; 
-            background: rgba(0,0,0,0.2); border-radius: 20px;'>
-    <p style='color: rgba(255,255,255,0.6); margin: 0;'>
-        💫 Sistema de Sorteo Digital | Totalmente Aleatorio | 
-        <span style='color: #4ECDC4;'>Powered by Streamlit</span>
+<div style='text-align: center; margin-top: 50px; padding: 25px; 
+            background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); 
+            border-radius: 20px; box-shadow: 0 5px 20px rgba(30, 58, 138, 0.2);'>
+    <p style='color: #ffffff; margin: 0; font-weight: 500;'>
+        🏆 Sistema de Sorteo Digital | Totalmente Aleatorio | 
+        <span style='color: #fbbf24; font-weight: 600;'>Powered by Streamlit</span>
     </p>
 </div>
 """, unsafe_allow_html=True)
