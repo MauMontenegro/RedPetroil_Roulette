@@ -44,22 +44,9 @@ if uploaded_file is not None:
     participants = df.to_dict(orient="records")
     st.success(f"✅ Archivo cargado: {len(participants)} participantes encontrados")
 else:
-    # Show instructions and use example data
     st.info("👆 Por favor carga un archivo Excel con los participantes")
     st.warning("📋 El archivo debe contener al menos una columna 'Nombre'")
-    
-    # Example data for demo
-    st.info("📁 Usando datos de ejemplo para demostración")
-    participants = [
-        {"Nombre": "Carlos García", "Ciudad": "CDMX", "Frase": "¡Vamos con todo!"},
-        {"Nombre": "María López", "Ciudad": "Monterrey", "Frase": "Siempre positiva"},
-        {"Nombre": "Juan Martínez", "Ciudad": "Guadalajara", "Frase": "El éxito es constancia"},
-        {"Nombre": "Ana Rodríguez", "Ciudad": "Puebla", "Frase": "Nunca te rindas"},
-        {"Nombre": "Luis Hernández", "Ciudad": "Tijuana", "Frase": "Dale con todo"},
-        {"Nombre": "Sofia Pérez", "Ciudad": "Mérida", "Frase": "Sonríe siempre"},
-        {"Nombre": "Diego Sánchez", "Ciudad": "Querétaro", "Frase": "Actitud positiva"},
-        {"Nombre": "Valentina Cruz", "Ciudad": "León", "Frase": "Sí se puede"},
-    ]
+    st.stop()  # Stop execution until file is uploaded
 
 # Logo container with blue background
 import base64
