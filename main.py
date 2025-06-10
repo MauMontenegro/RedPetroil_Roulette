@@ -469,7 +469,7 @@ components.html(html_code, height=700, scrolling=False)
 # Información adicional en columnas
 st.markdown("<br>", unsafe_allow_html=True)
 
-col1, col2, col3 = st.columns([1,2,1])
+col1, col2, col3 = st.columns([2,1,2])
 
 with col1:
     st.markdown("""
@@ -485,7 +485,7 @@ with col3:
     st.markdown("""
     <div style='background: rgba(255,255,255,0.1); padding: 20px; 
                 border-radius: 15px; text-align: center; backdrop-filter: blur(10px);'>
-        <h3 style='color: #FFD93D; margin: 0;'>🎲 Prob</h3>
+        <h3 style='color: #FFD93D; margin: 0;'>🎲 Probabilidad</h3>
         <p style='font-size: 36px; font-weight: bold; color: blue; margin: 10px 0;'>{:.1f}%</p>
         <p style='color: #888; margin: 0;'>Por participante</p>
     </div>
