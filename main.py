@@ -42,6 +42,9 @@ if uploaded_file is not None:
     # Load uploaded file
     df = pd.read_excel(uploaded_file)
     
+    # Limpiar nombres de columnas (eliminar espacios)
+    df.columns = df.columns.str.strip()
+    
     # Validar que existan las columnas requeridas
     required_columns = ['Nombre', 'Grado']
     missing_columns = [col for col in required_columns if col not in df.columns]
@@ -86,7 +89,7 @@ st.markdown(f"""
 st.markdown("""
 <h1 style='text-align: center; color: black; padding: 1rem;   
     border-radius: 20px; margin-bottom: 2rem; box-shadow: 0 0px 0px rgba(0,0,0,0.3);'>
-    SORTEO DIA DEL PADRE
+    SORTEO REGRESO A CLASES
 </h1>
 """, unsafe_allow_html=True)
 
