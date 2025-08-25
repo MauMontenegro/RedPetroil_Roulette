@@ -41,11 +41,21 @@ uploaded_file = st.file_uploader("📁 Cargar archivo de participantes", type=['
 if uploaded_file is not None:
     # Load uploaded file
     df = pd.read_excel(uploaded_file)
+    
+    # Validar que existan las columnas requeridas
+    required_columns = ['Nombre', 'Grado']
+    missing_columns = [col for col in required_columns if col not in df.columns]
+    
+    if missing_columns:
+        st.error(f"❌ Faltan las siguientes columnas en el archivo: {', '.join(missing_columns)}")
+        st.warning("📋 El archivo debe contener las columnas: 'Nombre' y 'Grado'")
+        st.stop()
+    
     participants = df.to_dict(orient="records")
     st.success(f"✅ Archivo cargado: {len(participants)} participantes encontrados")
 else:
     st.info("👆 Por favor carga un archivo Excel con los participantes")
-    st.warning("📋 El archivo debe contener al menos una columna 'Nombre'")
+    st.warning("📋 El archivo debe contener las columnas: 'Nombre' y 'Grado'")
     st.stop()  # Stop execution until file is uploaded
 
 # Logo container with blue background
@@ -442,7 +452,7 @@ html_code = f"""
                     const winner = participants[targetNumber - 1];
                     document.getElementById('winnerName').textContent = '🏆 ' + winner.Nombre + ' 🏆';
                     document.getElementById('winnerDetails').textContent = 
-                        '📍 ' + winner.Ciudad + (winner.Frase ? ' | "' + winner.Frase + '"' : '');
+                        '🎖️ Grado: ' + winner.Grado;
                     document.getElementById('winnerInfo').classList.add('show');
                     
                     createParticles();
@@ -507,8 +517,7 @@ with st.expander("📋 Ver lista completa de participantes", expanded=False):
                             font-weight: bold; margin-right: 15px;'>{i + 1}</div>
                 <div style='flex: 1;'>
                     <strong style='font-size: 18px;'>{p['Nombre']}</strong>
-                    <span style='color: #888; margin-left: 10px;'>• {p.get('Ciudad', 'N/A')}</span>
-                    {f"<br><small style='color: #666; font-style: italic;'>'{p['Frase']}'</small>" if 'Frase' in p and p['Frase'] else ""}
+                    <span style='color: #888; margin-left: 10px;'>• Grado: {p['Grado']}</span>
                 </div>
             </div>
         </div>
