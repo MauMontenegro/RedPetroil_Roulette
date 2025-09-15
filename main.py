@@ -209,7 +209,7 @@ html_code = f"""
         
         @keyframes roll {{
             0% {{ transform: translateY(0); opacity: 1; }}
-            50% {{ transform: translateY(-20px); opacity: 0.5; }}
+            50% {{ transform: translateY(-2px); opacity: 0.8; }}
             100% {{ transform: translateY(0); opacity: 1; }}
         }}
         
@@ -417,7 +417,7 @@ html_code = f"""
             
             // Seleccionar ganador aleatorio
             targetNumber = getRandomNumber();
-            speed = 50;
+            speed = 30;
             
             // Enviar el ganador a Streamlit
             window.parent.postMessage({{
@@ -435,12 +435,12 @@ html_code = f"""
                 
                 // Desacelerar gradualmente
                 if (speed > 10) {{
-                    speed -= 0.5;
+                    speed -= 2;
                 }} else {{
-                    speed -= 0.1;
+                    speed -= 0.5;
                 }}
                 
-                animationId = setTimeout(animate, 100 - speed);
+                animationId = setTimeout(animate, 550 - speed);
             }} else {{
                 // Mostrar el número ganador
                 updateDisplay(targetNumber);
