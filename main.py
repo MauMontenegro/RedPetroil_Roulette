@@ -435,12 +435,12 @@ html_code = f"""
                 
                 // Desacelerar gradualmente
                 if (speed > 10) {{
-                    speed -= 2;
+                    speed -= 1.5;
                 }} else {{
-                    speed -= 0.5;
+                    speed -= 0.4;
                 }}
                 
-                animationId = setTimeout(animate, 550 - speed);
+                animationId = setTimeout(animate, 200 - speed);
             }} else {{
                 // Mostrar el número ganador
                 updateDisplay(targetNumber);
