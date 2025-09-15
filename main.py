@@ -45,20 +45,17 @@ if uploaded_file is not None:
     # Limpiar nombres de columnas (eliminar espacios)
     df.columns = df.columns.str.strip()
     
-    # Validar que existan las columnas requeridas
-    required_columns = ['Nombre', 'Grado']
-    missing_columns = [col for col in required_columns if col not in df.columns]
-    
-    if missing_columns:
-        st.error(f"❌ Faltan las siguientes columnas en el archivo: {', '.join(missing_columns)}")
-        st.warning("📋 El archivo debe contener las columnas: 'Nombre' y 'Grado'")
+    # Validar que exista la columna requerida
+    if 'Nombre' not in df.columns:
+        st.error("❌ Falta la columna 'Nombre' en el archivo")
+        st.warning("📋 El archivo debe contener la columna: 'Nombre'")
         st.stop()
     
     participants = df.to_dict(orient="records")
     st.success(f"✅ Archivo cargado: {len(participants)} participantes encontrados")
 else:
     st.info("👆 Por favor carga un archivo Excel con los participantes")
-    st.warning("📋 El archivo debe contener las columnas: 'Nombre' y 'Grado'")
+    st.warning("📋 El archivo debe contener la columna: 'Nombre'")
     st.stop()  # Stop execution until file is uploaded
 
 # Logo container with blue background
@@ -89,7 +86,7 @@ st.markdown(f"""
 st.markdown("""
 <h1 style='text-align: center; color: black; padding: 1rem;   
     border-radius: 20px; margin-bottom: 2rem; box-shadow: 0 0px 0px rgba(0,0,0,0.3);'>
-    SORTEO REGRESO A CLASES
+    SORTEO RED PETROIL
 </h1>
 """, unsafe_allow_html=True)
 
@@ -455,7 +452,7 @@ html_code = f"""
                     const winner = participants[targetNumber - 1];
                     document.getElementById('winnerName').textContent = '🏆 ' + winner.Nombre + ' 🏆';
                     document.getElementById('winnerDetails').textContent = 
-                        '🎖️ Grado: ' + winner.Grado;
+                        '🎉 ¡Felicidades! 🎉';
                     document.getElementById('winnerInfo').classList.add('show');
                     
                     createParticles();
@@ -520,7 +517,6 @@ with st.expander("📋 Ver lista completa de participantes", expanded=False):
                             font-weight: bold; margin-right: 15px;'>{i + 1}</div>
                 <div style='flex: 1;'>
                     <strong style='font-size: 18px;'>{p['Nombre']}</strong>
-                    <span style='color: #888; margin-left: 10px;'>• Grado: {p['Grado']}</span>
                 </div>
             </div>
         </div>
