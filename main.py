@@ -51,6 +51,12 @@ if uploaded_file is not None:
         st.warning("📋 El archivo debe contener la columna: 'Nombre'")
         st.stop()
     
+    # Asegurar que exista la columna 'comentario_extra' y limpiar datos nulos
+    if 'comentario_extra' not in df.columns:
+        df['comentario_extra'] = ""
+    else:
+        df['comentario_extra'] = df['comentario_extra'].fillna("")
+
     participants = df.to_dict(orient="records")
     st.success(f"✅ Archivo cargado: {len(participants)} participantes encontrados")
 else:
@@ -451,8 +457,8 @@ html_code = f"""
                 setTimeout(() => {{
                     const winner = participants[targetNumber - 1];
                     document.getElementById('winnerName').textContent = '🏆 ' + winner.Nombre + ' 🏆';
-                    document.getElementById('winnerDetails').textContent = 
-                        '🎉 ¡Felicidades! 🎉';
+                    const extraComment = winner.comentario_extra ? '<br><span style="font-size: 24px; color: #4ECDC4;">💬 ' + winner.comentario_extra + '</span>' : '';
+                    document.getElementById('winnerDetails').innerHTML = '🎉 ¡Felicidades! 🎉' + extraComment;
                     document.getElementById('winnerInfo').classList.add('show');
                     
                     createParticles();
@@ -474,7 +480,8 @@ html_code = f"""
 """
 
 # Mostrar la máquina de números
-components.html(html_code, height=700, scrolling=False)
+html_b64 = base64.b64encode(html_code.encode('utf-8')).decode('utf-8')
+components.iframe(f"data:text/html;base64,{html_b64}", height=700, scrolling=False)
 
 # Información adicional en columnas
 st.markdown("<br>", unsafe_allow_html=True)
@@ -517,6 +524,7 @@ with st.expander("📋 Ver lista completa de participantes", expanded=False):
                             font-weight: bold; margin-right: 15px;'>{i + 1}</div>
                 <div style='flex: 1;'>
                     <strong style='font-size: 18px;'>{p['Nombre']}</strong>
+                    {f"<br><span style='color: #ccc; font-size: 14px; font-weight: normal;'>💬 {p['comentario_extra']}</span>" if p.get('comentario_extra') else ""}
                 </div>
             </div>
         </div>
