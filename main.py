@@ -46,13 +46,16 @@ if uploaded_file is not None:
             df = pd.read_excel(uploaded_file, sheet_name="Asignacion")
             df.columns = df.columns.str.strip()
             
-            # Verificar columnas requeridas para el nuevo formato
-            if all(col in df.columns for col in ['NOMBRE', 'ESTACIÓN', 'PROBABILIDAD']):
+            # Verificar columnas requeridas incluyendo folios G (Inicia) y H (Termina)
+            required = ['NOMBRE', 'ESTACIÓN', 'PROBABILIDAD', 'FOLIO INICIAL', 'FOLIO FINAL']
+            if all(col in df.columns for col in required):
                 df['PROBABILIDAD'] = pd.to_numeric(df['PROBABILIDAD'], errors='coerce').fillna(0)
+                df['FOLIO INICIAL'] = pd.to_numeric(df['FOLIO INICIAL'], errors='coerce').fillna(0).astype(int)
+                df['FOLIO FINAL'] = pd.to_numeric(df['FOLIO FINAL'], errors='coerce').fillna(0).astype(int)
                 total_prob = df['PROBABILIDAD'].sum()
                 df['PROBABILIDAD_NORM'] = df['PROBABILIDAD'] / total_prob if total_prob > 0 else 1 / len(df)
             else:
-                st.error("❌ La hoja 'Asignacion' no contiene las columnas requeridas: NOMBRE, ESTACIÓN, PROBABILIDAD.")
+                st.error(f"❌ La hoja 'Asignacion' debe tener: {', '.join(required)}")
                 st.stop()
         
         # 2. Intentar detectar el formato anterior (Cualquier hoja con columna 'Nombre')
@@ -67,6 +70,8 @@ if uploaded_file is not None:
                 # Si no tiene ESTACIÓN, usamos comentario_extra o un valor por defecto
                 if 'ESTACIÓN' not in df.columns:
                     df['ESTACIÓN'] = df['comentario_extra'].fillna("General") if 'comentario_extra' in df.columns else "General"
+                df['FOLIO INICIAL'] = df.index + 1
+                df['FOLIO FINAL'] = df.index + 1
                 
                 # En el formato viejo, todos tienen la misma probabilidad (1/N)
                 df['PROBABILIDAD_NORM'] = 1 / len(df)
@@ -354,7 +359,7 @@ html_code = f"""
                 <div class="glow" id="glow"></div>
                 <img src='data:image/png;base64,{logo_base64}' 
                     style='width: 120px; height: auto; margin-bottom: 20px; opacity: 0.8;'>
-                <div class="label">Participante Número</div> 
+                <div class="label">Folio Ganador</div> 
                        
             <div class="number-display" id="numberDisplay">---</div>
         </div>
@@ -372,14 +377,22 @@ html_code = f"""
     <script>
         const participants = {json.dumps(participants)};
         const totalParticipants = participants.length;
+        
+        // Encontrar el rango total de folios para la animación
+        const allFoliosStart = participants.map(p => p['FOLIO INICIAL']);
+        const allFoliosEnd = participants.map(p => p['FOLIO FINAL']);
+        const minFolio = Math.min(...allFoliosStart);
+        const maxFolio = Math.max(...allFoliosEnd);
+
         let isAnimating = false;
         let animationId;
         let currentNumber = 1;
         let speed = 50;
-        let targetNumber = null;
+        let targetFolio = null;
+        let winningParticipant = null;
         
         function getRandomNumber() {{
-            return Math.floor(Math.random() * totalParticipants) + 1;
+            return Math.floor(Math.random() * (maxFolio - minFolio + 1)) + minFolio;
         }}
         
         function getWeightedWinnerIndex() {{
@@ -451,15 +464,14 @@ html_code = f"""
             document.getElementById('winnerInfo').classList.remove('show');
             document.getElementById('glow').classList.remove('active');
             
-            // Seleccionar ganador aleatorio
-            targetNumber = getWeightedWinnerIndex();
-            speed = 30;
+            // 1. Seleccionar ganador por probabilidad
+            const winnerIdx = getWeightedWinnerIndex() - 1;
+            winningParticipant = participants[winnerIdx];
             
-            // Enviar el ganador a Streamlit
-            window.parent.postMessage({{
-                type: 'winner_selected',
-                winnerIndex: targetNumber - 1
-            }}, '*');
+            // 2. Seleccionar un folio aleatorio dentro del rango del ganador
+            targetFolio = Math.floor(Math.random() * (winningParticipant['FOLIO FINAL'] - winningParticipant['FOLIO INICIAL'] + 1)) + winningParticipant['FOLIO INICIAL'];
+            
+            speed = 30;
             
             animate();
         }}
@@ -478,16 +490,15 @@ html_code = f"""
                 
                 animationId = setTimeout(animate, 200 - speed);
             }} else {{
-                // Mostrar el número ganador
-                updateDisplay(targetNumber);
+                // Mostrar el folio ganador
+                updateDisplay(targetFolio);
                 document.getElementById('numberDisplay').classList.remove('rolling');
                 document.getElementById('glow').classList.add('active');
                 
                 // Mostrar información del ganador
                 setTimeout(() => {{
-                    const winner = participants[targetNumber - 1];
-                    document.getElementById('winnerName').textContent = '🏆 ' + winner.NOMBRE + ' 🏆';
-                    const stationInfo = '<br><span style="font-size: 24px; color: #4ECDC4;">⛽ Estación: ' + winner.ESTACIÓN + '</span>';
+                    document.getElementById('winnerName').textContent = '🏆 ' + winningParticipant.NOMBRE + ' 🏆';
+                    const stationInfo = '<br><span style="font-size: 24px; color: #4ECDC4;">⛽ Estación: ' + winningParticipant.ESTACIÓN + '</span><br><span style="color: #fbbf24;">🎫 Folio: ' + targetFolio + '</span>';
                     document.getElementById('winnerDetails').innerHTML = '🎉 ¡Felicidades! 🎉' + stationInfo;
                     document.getElementById('winnerInfo').classList.add('show');
                     
@@ -554,7 +565,7 @@ with st.expander("📋 Ver lista completa de participantes", expanded=False):
                             font-weight: bold; margin-right: 15px;'>{i + 1}</div>
                 <div style='flex: 1;'>
                     <strong style='font-size: 18px;'>{p['NOMBRE']}</strong>
-                    <br><span style='color: #ccc; font-size: 14px; font-weight: normal;'>⛽ Estación: {p['ESTACIÓN']}</span>
+                    <br><span style='color: #ccc; font-size: 14px; font-weight: normal;'>⛽ Estación: {p['ESTACIÓN']} | 🎫 Folios: {p['FOLIO INICIAL']} - {p['FOLIO FINAL']} | 📈 Prob: {p.get('PROBABILIDAD', 0)}%</span>
                 </div>
             </div>
         </div>
