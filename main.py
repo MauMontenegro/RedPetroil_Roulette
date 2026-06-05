@@ -39,29 +39,49 @@ st.markdown("""
 uploaded_file = st.file_uploader("📁 Cargar archivo de participantes", type=['xlsx', 'xls'])
 
 if uploaded_file is not None:
-    # Load uploaded file
-    df = pd.read_excel(uploaded_file)
-    
-    # Limpiar nombres de columnas (eliminar espacios)
-    df.columns = df.columns.str.strip()
-    
-    # Validar que exista la columna requerida
-    if 'Nombre' not in df.columns:
-        st.error("❌ Falta la columna 'Nombre' en el archivo")
-        st.warning("📋 El archivo debe contener la columna: 'Nombre'")
+    try:
+        xls = pd.ExcelFile(uploaded_file)
+        # 1. Intentar detectar el nuevo formato (Hoja 'Asignacion')
+        if "Asignacion" in xls.sheet_names:
+            df = pd.read_excel(uploaded_file, sheet_name="Asignacion")
+            df.columns = df.columns.str.strip()
+            
+            # Verificar columnas requeridas para el nuevo formato
+            if all(col in df.columns for col in ['NOMBRE', 'ESTACIÓN', 'PROBABILIDAD']):
+                df['PROBABILIDAD'] = pd.to_numeric(df['PROBABILIDAD'], errors='coerce').fillna(0)
+                total_prob = df['PROBABILIDAD'].sum()
+                df['PROBABILIDAD_NORM'] = df['PROBABILIDAD'] / total_prob if total_prob > 0 else 1 / len(df)
+            else:
+                st.error("❌ La hoja 'Asignacion' no contiene las columnas requeridas: NOMBRE, ESTACIÓN, PROBABILIDAD.")
+                st.stop()
+        
+        # 2. Intentar detectar el formato anterior (Cualquier hoja con columna 'Nombre')
+        else:
+            df = pd.read_excel(uploaded_file, sheet_name=0)
+            df.columns = df.columns.str.strip()
+            # Buscamos la columna Nombre de forma flexible (ignora mayúsculas/minúsculas)
+            name_col = next((c for c in df.columns if c.lower() == 'nombre'), None)
+            
+            if name_col:
+                df = df.rename(columns={name_col: 'NOMBRE'})
+                # Si no tiene ESTACIÓN, usamos comentario_extra o un valor por defecto
+                if 'ESTACIÓN' not in df.columns:
+                    df['ESTACIÓN'] = df['comentario_extra'].fillna("General") if 'comentario_extra' in df.columns else "General"
+                
+                # En el formato viejo, todos tienen la misma probabilidad (1/N)
+                df['PROBABILIDAD_NORM'] = 1 / len(df)
+            else:
+                st.error("❌ No se reconoció el formato. Asegúrate de tener una hoja 'Asignacion' o una columna 'Nombre'.")
+                st.stop()
+    except Exception as e:
+        st.error(f"❌ Error al procesar el archivo: {str(e)}")
         st.stop()
-    
-    # Asegurar que exista la columna 'comentario_extra' y limpiar datos nulos
-    if 'comentario_extra' not in df.columns:
-        df['comentario_extra'] = ""
-    else:
-        df['comentario_extra'] = df['comentario_extra'].fillna("")
 
     participants = df.to_dict(orient="records")
     st.success(f"✅ Archivo cargado: {len(participants)} participantes encontrados")
 else:
     st.info("👆 Por favor carga un archivo Excel con los participantes")
-    st.warning("📋 El archivo debe contener la columna: 'Nombre'")
+    st.warning("📋 Formatos aceptados: Hoja 'Asignacion' (Ponderado) o columna 'Nombre' (Uniforme)")
     st.stop()  # Stop execution until file is uploaded
 
 # Logo container with blue background
@@ -362,6 +382,16 @@ html_code = f"""
             return Math.floor(Math.random() * totalParticipants) + 1;
         }}
         
+        function getWeightedWinnerIndex() {{
+            const r = Math.random();
+            let cumulative = 0;
+            for (let i = 0; i < participants.length; i++) {{
+                cumulative += participants[i].PROBABILIDAD_NORM;
+                if (r <= cumulative) return i + 1;
+            }}
+            return participants.length;
+        }}
+        
         function updateDisplay(number) {{
             const display = document.getElementById('numberDisplay');
             display.textContent = String(number).padStart(3, '0');
@@ -422,7 +452,7 @@ html_code = f"""
             document.getElementById('glow').classList.remove('active');
             
             // Seleccionar ganador aleatorio
-            targetNumber = getRandomNumber();
+            targetNumber = getWeightedWinnerIndex();
             speed = 30;
             
             // Enviar el ganador a Streamlit
@@ -456,9 +486,9 @@ html_code = f"""
                 // Mostrar información del ganador
                 setTimeout(() => {{
                     const winner = participants[targetNumber - 1];
-                    document.getElementById('winnerName').textContent = '🏆 ' + winner.Nombre + ' 🏆';
-                    const extraComment = winner.comentario_extra ? '<br><span style="font-size: 24px; color: #4ECDC4;">💬 ' + winner.comentario_extra + '</span>' : '';
-                    document.getElementById('winnerDetails').innerHTML = '🎉 ¡Felicidades! 🎉' + extraComment;
+                    document.getElementById('winnerName').textContent = '🏆 ' + winner.NOMBRE + ' 🏆';
+                    const stationInfo = '<br><span style="font-size: 24px; color: #4ECDC4;">⛽ Estación: ' + winner.ESTACIÓN + '</span>';
+                    document.getElementById('winnerDetails').innerHTML = '🎉 ¡Felicidades! 🎉' + stationInfo;
                     document.getElementById('winnerInfo').classList.add('show');
                     
                     createParticles();
@@ -502,11 +532,11 @@ with col3:
     st.markdown("""
     <div style='background: rgba(255,255,255,0.1); padding: 20px; 
                 border-radius: 15px; text-align: center; backdrop-filter: blur(10px);'>
-        <h3 style='color: #FFD93D; margin: 0;'>🎲 Probabilidad</h3>
-        <p style='font-size: 36px; font-weight: bold; color: blue; margin: 10px 0;'>{:.1f}%</p>
-        <p style='color: #888; margin: 0;'>Por participante</p>
+        <h3 style='color: #FFD93D; margin: 0;'>🎲 Sorteo</h3>
+        <p style='font-size: 36px; font-weight: bold; color: blue; margin: 10px 0;'>Ponderado</p>
+        <p style='color: #888; margin: 0;'>Basado en Probabilidad</p>
     </div>
-    """.format(100/len(participants)), unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
 
 # Lista de participantes
 st.markdown("<br><br>", unsafe_allow_html=True)
@@ -523,8 +553,8 @@ with st.expander("📋 Ver lista completa de participantes", expanded=False):
                             display: flex; align-items: center; justify-content: center;
                             font-weight: bold; margin-right: 15px;'>{i + 1}</div>
                 <div style='flex: 1;'>
-                    <strong style='font-size: 18px;'>{p['Nombre']}</strong>
-                    {f"<br><span style='color: #ccc; font-size: 14px; font-weight: normal;'>💬 {p['comentario_extra']}</span>" if p.get('comentario_extra') else ""}
+                    <strong style='font-size: 18px;'>{p['NOMBRE']}</strong>
+                    <br><span style='color: #ccc; font-size: 14px; font-weight: normal;'>⛽ Estación: {p['ESTACIÓN']}</span>
                 </div>
             </div>
         </div>
