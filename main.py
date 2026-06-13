@@ -37,6 +37,18 @@ st.markdown("""
 
 # File uploader
 uploaded_file = st.file_uploader("📁 Cargar archivo de participantes", type=['xlsx', 'xls'])
+spin_duration_seconds = st.selectbox(
+    "⏱️ Tiempo para detener la ruleta",
+    options=[3, 5, 8, 10, 15, 20],
+    index=2,
+    format_func=lambda seconds: f"{seconds} segundos"
+)
+required_spins = st.selectbox(
+    "🔢 Total de giros para seleccionar ganador",
+    options=list(range(1, 11)),
+    index=0,
+    format_func=lambda spins: f"{spins} giro{'s' if spins > 1 else ''}"
+)
 
 if uploaded_file is not None:
     try:
@@ -351,6 +363,15 @@ html_code = f"""
             cursor: not-allowed;
             transform: scale(0.95);
         }}
+
+        .spin-counter {{
+            margin: 18px 0 0;
+            font-size: 18px;
+            color: #fbbf24;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 700;
+        }}
     </style>
 </head>
 <body>
@@ -359,12 +380,13 @@ html_code = f"""
                 <div class="glow" id="glow"></div>
                 <img src='data:image/png;base64,{logo_base64}' 
                     style='width: 120px; height: auto; margin-bottom: 20px; opacity: 0.8;'>
-                <div class="label">Folio Ganador</div> 
+                <div class="label">Folio</div> 
                        
             <div class="number-display" id="numberDisplay">---</div>
         </div>
         
         <button id="startButton" onclick="startAnimation()">🎲 INICIAR SORTEO</button>
+        <div class="spin-counter" id="spinCounter"></div>
         
         <div class="winner-info" id="winnerInfo">
             <div class="winner-name" id="winnerName"></div>
@@ -387,9 +409,16 @@ html_code = f"""
         let isAnimating = false;
         let animationId;
         let currentNumber = 1;
-        let speed = 50;
         let targetFolio = null;
-        let winningParticipant = null;
+        let selectedParticipant = null;
+        let finalWinnerIndex = null;
+        let currentSpinNumber = 0;
+        let isWinnerSpin = false;
+        const spinDurationMs = {spin_duration_seconds * 1000};
+        const requiredSpins = {required_spins};
+        const minFrameDelay = 40;
+        const maxFrameDelay = 220;
+        let animationStartTime = null;
         
         function getRandomNumber() {{
             return Math.floor(Math.random() * (maxFolio - minFolio + 1)) + minFolio;
@@ -404,10 +433,35 @@ html_code = f"""
             }}
             return participants.length;
         }}
+
+        function getRandomParticipantIndex() {{
+            return Math.floor(Math.random() * participants.length);
+        }}
+
+        function getRandomNonWinnerIndex() {{
+            if (participants.length <= 1 || finalWinnerIndex === null) {{
+                return getRandomParticipantIndex();
+            }}
+
+            let participantIndex = getRandomParticipantIndex();
+            while (participantIndex === finalWinnerIndex) {{
+                participantIndex = getRandomParticipantIndex();
+            }}
+            return participantIndex;
+        }}
+
+        function getRandomFolio(participant) {{
+            return Math.floor(Math.random() * (participant['FOLIO FINAL'] - participant['FOLIO INICIAL'] + 1)) + participant['FOLIO INICIAL'];
+        }}
         
         function updateDisplay(number) {{
             const display = document.getElementById('numberDisplay');
             display.textContent = String(number).padStart(3, '0');
+        }}
+
+        function updateSpinCounter(message = null) {{
+            const counter = document.getElementById('spinCounter');
+            counter.textContent = message || `Giro ${{currentSpinNumber}} de ${{requiredSpins}}`;
         }}
         
         function createParticles() {{
@@ -463,47 +517,64 @@ html_code = f"""
             document.getElementById('numberDisplay').classList.add('rolling');
             document.getElementById('winnerInfo').classList.remove('show');
             document.getElementById('glow').classList.remove('active');
+
+            if (currentSpinNumber === 0) {{
+                finalWinnerIndex = getWeightedWinnerIndex() - 1;
+            }}
+
+            currentSpinNumber += 1;
+            isWinnerSpin = currentSpinNumber >= requiredSpins;
+            updateSpinCounter();
             
-            // 1. Seleccionar ganador por probabilidad
-            const winnerIdx = getWeightedWinnerIndex() - 1;
-            winningParticipant = participants[winnerIdx];
+            if (isWinnerSpin) {{
+                selectedParticipant = participants[finalWinnerIndex];
+            }} else {{
+                selectedParticipant = participants[getRandomNonWinnerIndex()];
+            }}
             
-            // 2. Seleccionar un folio aleatorio dentro del rango del ganador
-            targetFolio = Math.floor(Math.random() * (winningParticipant['FOLIO FINAL'] - winningParticipant['FOLIO INICIAL'] + 1)) + winningParticipant['FOLIO INICIAL'];
+            targetFolio = getRandomFolio(selectedParticipant);
             
-            speed = 30;
+            animationStartTime = Date.now();
             
             animate();
         }}
         
         function animate() {{
-            if (speed > 0) {{
+            const elapsed = Date.now() - animationStartTime;
+            const progress = Math.min(elapsed / spinDurationMs, 1);
+
+            if (progress < 1) {{
                 currentNumber = getRandomNumber();
                 updateDisplay(currentNumber);
                 
-                // Desacelerar gradualmente
-                if (speed > 10) {{
-                    speed -= 1.5;
-                }} else {{
-                    speed -= 0.4;
-                }}
-                
-                animationId = setTimeout(animate, 200 - speed);
+                const easedProgress = progress * progress;
+                const frameDelay = minFrameDelay + (maxFrameDelay - minFrameDelay) * easedProgress;
+                animationId = setTimeout(animate, frameDelay);
             }} else {{
-                // Mostrar el folio ganador
+                // Mostrar el folio resultante del giro
                 updateDisplay(targetFolio);
                 document.getElementById('numberDisplay').classList.remove('rolling');
-                document.getElementById('glow').classList.add('active');
                 
-                // Mostrar información del ganador
                 setTimeout(() => {{
-                    document.getElementById('winnerName').textContent = '🏆 ' + winningParticipant.NOMBRE + ' 🏆';
-                    const stationInfo = '<br><span style="font-size: 24px; color: #4ECDC4;">⛽ Estación: ' + winningParticipant.ESTACIÓN + '</span><br><span style="color: #fbbf24;">🎫 Folio: ' + targetFolio + '</span>';
-                    document.getElementById('winnerDetails').innerHTML = '🎉 ¡Felicidades! 🎉' + stationInfo;
+                    const stationInfo = '<br><span style="font-size: 24px; color: #4ECDC4;">⛽ Estación: ' + selectedParticipant.ESTACIÓN + '</span><br><span style="color: #fbbf24;">🎫 Folio: ' + targetFolio + '</span>';
+
+                    if (isWinnerSpin) {{
+                        document.getElementById('glow').classList.add('active');
+                        document.getElementById('winnerName').textContent = '🏆 ' + selectedParticipant.NOMBRE + ' 🏆';
+                        document.getElementById('winnerDetails').innerHTML = '🎉 ¡Felicidades! 🎉' + stationInfo;
+                        updateSpinCounter('Ganador seleccionado');
+                        createParticles();
+                        currentSpinNumber = 0;
+                        finalWinnerIndex = null;
+                        document.getElementById('startButton').textContent = '🎲 INICIAR SORTEO';
+                    }} else {{
+                        document.getElementById('winnerName').textContent = selectedParticipant.NOMBRE;
+                        document.getElementById('winnerDetails').innerHTML = 'Suerte para la próxima' + stationInfo;
+                        document.getElementById('startButton').textContent = '🎲 SIGUIENTE GIRO';
+                    }}
+
                     document.getElementById('winnerInfo').classList.add('show');
-                    
-                    createParticles();
-                    
+
                     // Reactivar botón después de 2 segundos
                     setTimeout(() => {{
                         document.getElementById('startButton').disabled = false;
@@ -515,6 +586,7 @@ html_code = f"""
         
         // Inicializar display
         updateDisplay('---');
+        updateSpinCounter('Giro 0 de ' + requiredSpins);
     </script>
 </body>
 </html>
